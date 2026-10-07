@@ -45,4 +45,4 @@ Needs `host_fs_read_base64` and `host_fetch` with `responseEncoding:"base64"` (a
 
 ## Build
 
-`cargo build --release --target wasm32-wasip1 --lib` produces `agentplug_modlens.wasm`; CI publishes it as `modlens.wasm` to `AnEntrypoint/agentplug-modlens-bin`.
+`cargo build --release --target wasm32-wasip1 --lib` produces `agentplug_modlens.wasm`; Releases are built and signed by the `release-modlens` workflow in `AnEntrypoint/agentplug-crux` (dispatch it with `gh workflow run release-modlens.yml -R AnEntrypoint/agentplug-crux`), which holds the release signing key and publishes `modlens.wasm` to `AnEntrypoint/agentplug-modlens-bin`. This repo carries no signing secrets.
