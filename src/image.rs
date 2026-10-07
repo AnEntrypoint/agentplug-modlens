@@ -55,6 +55,25 @@ pub fn host_of(url: &str) -> Result<String, String> {
     Ok(host.to_ascii_lowercase())
 }
 
+/// Resolve a redirect target against the URL that produced it. Only http(s) targets
+/// are accepted, so a redirect cannot switch the request to another scheme.
+pub fn resolve_location(base: &str, location: &str) -> Result<String, String> {
+    let next = if location.starts_with("https://") || location.starts_with("http://") {
+        location.to_string()
+    } else if let Some(path) = location.strip_prefix("//") {
+        let scheme = if base.starts_with("https://") { "https:" } else { "http:" };
+        format!("{scheme}//{path}")
+    } else if location.starts_with('/') {
+        let origin_end = base.find("://").map(|i| i + 3).unwrap_or(0);
+        let authority_end = base[origin_end..].find(['/', '?', '#']).map(|i| origin_end + i).unwrap_or(base.len());
+        format!("{}{}", &base[..authority_end], location)
+    } else {
+        return Err(format!("unsupported redirect target {location:?}"));
+    };
+    host_of(&next)?;
+    Ok(next)
+}
+
 pub fn check_remote_url(url: &str) -> Result<(), String> {
     let host = host_of(url)?;
     if is_private_host(&host) {

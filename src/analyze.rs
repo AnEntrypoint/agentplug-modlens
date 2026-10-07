@@ -91,14 +91,32 @@ fn load_image(body: &Value, timeout_ms: u64) -> Result<Loaded, String> {
         return finish(mime, data, path.to_string());
     }
     let url = get("url").or_else(|| get("image")).ok_or("read_image needs one of: path, url, base64")?;
-    image::check_remote_url(url)?;
-    let resp = abi::fetch(url, &json!({"method": "GET", "responseEncoding": "base64", "timeoutMs": timeout_ms}));
-    if resp["ok"] != true {
-        return Err(format!("image download failed: status {} {}", resp["status"], resp["error"].as_str().unwrap_or("")));
-    }
-    let data = resp["body"].as_str().unwrap_or("").to_string();
+    let (data, final_url) = fetch_image_checking_each_hop(url, timeout_ms)?;
     let mime = image::sniff_mime(&data).map(String::from).unwrap_or_default();
-    finish(mime, data, url.to_string())
+    finish(mime, data, final_url)
+}
+
+const MAX_IMAGE_REDIRECTS: usize = 5;
+
+/// The host never follows redirects for image fetches, so every hop is checked here
+/// against the private-address rules before it is requested.
+fn fetch_image_checking_each_hop(start: &str, timeout_ms: u64) -> Result<(String, String), String> {
+    let mut current = start.to_string();
+    for _ in 0..=MAX_IMAGE_REDIRECTS {
+        image::check_remote_url(&current)?;
+        let resp = abi::fetch(&current, &json!({"method": "GET", "responseEncoding": "base64", "timeoutMs": timeout_ms}));
+        let status = resp["status"].as_u64().unwrap_or(0);
+        if matches!(status, 301 | 302 | 303 | 307 | 308) {
+            let location = resp["location"].as_str().ok_or("redirect without a Location header")?;
+            current = image::resolve_location(&current, location)?;
+            continue;
+        }
+        if resp["ok"] != true {
+            return Err(format!("image download failed: status {status} {}", resp["error"].as_str().unwrap_or("")));
+        }
+        return Ok((resp["body"].as_str().unwrap_or("").to_string(), current));
+    }
+    Err(format!("more than {MAX_IMAGE_REDIRECTS} redirects while fetching the image"))
 }
 
 fn finish(mime: String, b64: String, label: String) -> Result<Loaded, String> {

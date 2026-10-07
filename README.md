@@ -36,7 +36,7 @@ Settings come from `.gm/modlens.json` when it names the provider, otherwise from
 ## Safety
 
 - Image text is untrusted: the prompt says so and every answer carries `untrusted_content: true`.
-- `url` input is downloaded by the host (http/https only, no userinfo, private, loopback and link-local hosts refused, 20 MB cap, type checked by magic bytes). Redirect targets are not re-checked by the host.
+- `url` input is downloaded by the host (http/https only, no userinfo, private, loopback and link-local hosts refused, 20 MB cap, type checked by magic bytes). The host does not follow redirects for image fetches; the plugin follows up to five and applies the same host checks to every hop.
 - Keys are masked by `doctor` and scrubbed from error text.
 
 ## Host surface
