@@ -1,6 +1,6 @@
 [package]
 name = "agentplug-modlens"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Vision-bridge plugin for gm's agentplug host: gives a text-only model structured evidence for an image."
 license = "MIT"
